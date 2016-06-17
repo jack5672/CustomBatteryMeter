@@ -3,6 +3,7 @@ package xyz.paphonb.custombatterymeter.xposed;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
+import android.os.Build;
 import android.view.View;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -98,6 +99,7 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
     }
 
     private void hookSetDarkIntensity(Class<?> classBatteryMeterView) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
         XposedHelpers.findAndHookMethod(classBatteryMeterView, "setDarkIntensity", float.class, new XC_MethodReplacement() {
             @Override
             protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
