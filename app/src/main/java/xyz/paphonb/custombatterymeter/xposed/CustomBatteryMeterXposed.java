@@ -16,6 +16,8 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
     public static final String PACKAGE_SYSTEMUI = "com.android.systemui";
     private static final String BATTERY_METER_DRAWABLE = "BatteryMeterDrawable";
     private static final String BATTERY_TRACKER = "BatteryTracker";
+    private static final String LOG_FORMAT = "%1$sCustomBatteryMeter %2$s: %3$s";
+    private static final String TAG = "CustomBatteryMeterXposed";
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
@@ -30,55 +32,63 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
     }
 
     private void initAosp(XC_LoadPackage.LoadPackageParam lpparam) {
-        final Class<?> classBatteryMeterView = XposedHelpers.findClass("com.android.systemui.BatteryMeterView", lpparam.classLoader);
+        try {
+            final Class<?> classBatteryMeterView = XposedHelpers.findClass("com.android.systemui.BatteryMeterView", lpparam.classLoader);
 
-        XposedBridge.hookAllConstructors(classBatteryMeterView, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                Context context = (Context) param.args[0];
-                Resources res = context.getResources();
-                createBatteryMeterDrawable(res, param.thisObject);
-            }
-        });
-
-        hookOnDraw(classBatteryMeterView, "draw");
-        hookOnSizeChanged(classBatteryMeterView);
-        hookSetDarkIntensity(classBatteryMeterView);
-
-        XposedHelpers.findAndHookMethod(View.class, "onMeasure", int.class, int.class, new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                if (param.thisObject.getClass().getName().equals(classBatteryMeterView.getName())) {
-                    replaceOnMeasure(param);
-                    param.setResult(null);
+            XposedBridge.hookAllConstructors(classBatteryMeterView, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    Context context = (Context) param.args[0];
+                    Resources res = context.getResources();
+                    createBatteryMeterDrawable(res, param.thisObject);
                 }
-            }
-        });
+            });
+
+            hookOnDraw(classBatteryMeterView, "draw");
+            hookOnSizeChanged(classBatteryMeterView);
+            hookSetDarkIntensity(classBatteryMeterView);
+
+            XposedHelpers.findAndHookMethod(View.class, "onMeasure", int.class, int.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    if (param.thisObject.getClass().getName().equals(classBatteryMeterView.getName())) {
+                        replaceOnMeasure(param);
+                        param.setResult(null);
+                    }
+                }
+            });
+        } catch (Throwable t) {
+            logE(TAG, "Error in initAosp", t);
+        }
     }
 
     private void initCm(XC_LoadPackage.LoadPackageParam lpparam) {
-        Class<?> classBatteryMeterView = XposedHelpers.findClass("com.android.systemui.BatteryMeterView", lpparam.classLoader);
+        try {
+            Class<?> classBatteryMeterView = XposedHelpers.findClass("com.android.systemui.BatteryMeterView", lpparam.classLoader);
 
-        XposedBridge.hookAllMethods(classBatteryMeterView, "createBatteryMeterDrawable", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
-                Resources res = context.getResources();
-                createBatteryMeterDrawable(res, param.thisObject);
-            }
-        });
+            XposedBridge.hookAllMethods(classBatteryMeterView, "createBatteryMeterDrawable", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
+                    Resources res = context.getResources();
+                    createBatteryMeterDrawable(res, param.thisObject);
+                }
+            });
 
-        hookOnDraw(classBatteryMeterView, "onDraw");
-        hookOnSizeChanged(classBatteryMeterView);
-        hookSetDarkIntensity(classBatteryMeterView);
+            hookOnDraw(classBatteryMeterView, "onDraw");
+            hookOnSizeChanged(classBatteryMeterView);
+            hookSetDarkIntensity(classBatteryMeterView);
 
-        XposedHelpers.findAndHookMethod(classBatteryMeterView, "onMeasure", int.class, int.class, new XC_MethodReplacement() {
-            @Override
-            protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
-                replaceOnMeasure(param);
-                return null;
-            }
-        });
+            XposedHelpers.findAndHookMethod(classBatteryMeterView, "onMeasure", int.class, int.class, new XC_MethodReplacement() {
+                @Override
+                protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                    replaceOnMeasure(param);
+                    return null;
+                }
+            });
+        } catch (Throwable t) {
+            logE(TAG, "Error in initCm", t);
+        }
     }
 
     private void replaceOnMeasure(XC_MethodHook.MethodHookParam param) {
@@ -174,5 +184,11 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
         } else {
             return null;
         }
+    }
+
+    public static void logE(String tag, String msg, Throwable t) {
+        XposedBridge.log(String.format(LOG_FORMAT, "E/", tag, msg));
+        if (t != null)
+            XposedBridge.log(t);
     }
 }
