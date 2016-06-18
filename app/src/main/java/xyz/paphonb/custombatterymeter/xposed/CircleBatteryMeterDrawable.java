@@ -144,18 +144,12 @@ public class CircleBatteryMeterDrawable extends BatteryMeterDrawable {
             mTextPaint.setColor(paint.getColor());
             canvas.drawText("?", textX, mTextY, mTextPaint);
 
-        }/* else {
-            if (level > mCriticalLevel
-                    && (mShowPercent && tracker.level != 100) {
-                // draw the percentage text
+        } else {
+            if (mShowPercent && level != 100) {
                 String pctText = String.valueOf(level);
-                mTextPaint.setColor(paint.getColor());
                 canvas.drawText(pctText, textX, mTextY, mTextPaint);
-            } else if (level <= mCriticalLevel) {
-                // draw the warning text
-                canvas.drawText(mWarningString, textX, mTextY, mWarningTextPaint);
-            }*
-        }*/
+            }
+        }
     }
 
     private void updateChargeAnim(BatteryTracker tracker) {

@@ -48,6 +48,7 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
             hookOnDraw(classBatteryMeterView, "draw");
             hookOnSizeChanged(classBatteryMeterView);
             hookSetDarkIntensity(classBatteryMeterView);
+            hookUpdateShowPercent(classBatteryMeterView, "updateShowPercent");
 
             XposedHelpers.findAndHookMethod(View.class, "onMeasure", int.class, int.class, new XC_MethodHook() {
                 @Override
@@ -66,6 +67,7 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
     private void initCm(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
             Class<?> classBatteryMeterView = XposedHelpers.findClass("com.android.systemui.BatteryMeterView", lpparam.classLoader);
+            Class<?> classBatteryLevelTextView = XposedHelpers.findClass("com.android.systemui.BatteryLevelTextView", lpparam.classLoader);
 
             XposedBridge.hookAllMethods(classBatteryMeterView, "createBatteryMeterDrawable", new XC_MethodHook() {
                 @Override
@@ -73,18 +75,32 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
                     Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
                     Resources res = context.getResources();
                     createBatteryMeterDrawable(res, param.thisObject);
+                    setShowPercent(param.thisObject, XposedHelpers.getBooleanField(param.thisObject, "mShowPercent"));
                 }
             });
 
             hookOnDraw(classBatteryMeterView, "onDraw");
             hookOnSizeChanged(classBatteryMeterView);
             hookSetDarkIntensity(classBatteryMeterView);
+            hookUpdateShowPercent(classBatteryMeterView, "onBatteryStyleChanged");
 
             XposedHelpers.findAndHookMethod(classBatteryMeterView, "onMeasure", int.class, int.class, new XC_MethodReplacement() {
                 @Override
                 protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
                     replaceOnMeasure(param);
                     return null;
+                }
+            });
+
+            XposedHelpers.findAndHookMethod(classBatteryLevelTextView, "updateVisibility", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    Object view = param.thisObject;
+                    int mPercentMode = XposedHelpers.getIntField(param.thisObject, "mPercentMode");
+                    if (mPercentMode == 1) {
+                        XposedHelpers.callMethod(view, "setFlags", View.GONE, XposedHelpers.getStaticIntField(View.class, "VISIBILITY_MASK"));
+                        param.setResult(null);
+                    }
                 }
             });
         } catch (Throwable t) {
@@ -142,6 +158,16 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
         });
     }
 
+    private void hookUpdateShowPercent(Class<?> classBatteryMeterView, String methodName) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
+        XposedBridge.hookAllMethods(classBatteryMeterView, methodName, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                setShowPercent(param.thisObject, XposedHelpers.getBooleanField(param.thisObject, "mShowPercent"));
+            }
+        });
+    }
+
     private void onDraw(Canvas canvas, Object thisObject) {
         BatteryTracker batteryTracker = getTracker(thisObject);
         if (batteryTracker == null) {
@@ -160,6 +186,13 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
         BatteryMeterDrawable batteryMeterDrawable = new CircleBatteryMeterDrawable(res);
         batteryMeterDrawable.setBatteryMeterView((View) thisObject);
         setBatteryMeterDrawable(thisObject, batteryMeterDrawable);
+    }
+
+    private void setShowPercent(Object thisObject, boolean showPercent) {
+        BatteryMeterDrawable batteryMeterDrawable = getBatteryMeterDrawable(thisObject);
+        if (batteryMeterDrawable != null) {
+            batteryMeterDrawable.setShowPercent(showPercent);
+        }
     }
 
     private void setBatteryMeterDrawable(Object thisObject, BatteryMeterDrawable batteryMeterDrawable) {

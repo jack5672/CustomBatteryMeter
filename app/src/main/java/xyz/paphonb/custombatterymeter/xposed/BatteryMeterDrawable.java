@@ -8,6 +8,7 @@ import de.robv.android.xposed.XposedHelpers;
 
 public abstract class BatteryMeterDrawable {
     protected View mBatteryMeterView;
+    protected boolean mShowPercent;
 
     public void setBatteryMeterView(View batteryMeterView) {
         mBatteryMeterView = batteryMeterView;
@@ -48,4 +49,9 @@ public abstract class BatteryMeterDrawable {
     public abstract void onDispose();
 
     public abstract void setDarkIntensity(int backgroundColor, int fillColor);
+
+    public void setShowPercent(boolean showPercent) {
+        mShowPercent = showPercent;
+        invalidate();
+    }
 }
