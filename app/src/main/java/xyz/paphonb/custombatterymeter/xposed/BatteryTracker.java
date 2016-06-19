@@ -1,5 +1,7 @@
 package xyz.paphonb.custombatterymeter.xposed;
 
+import android.os.BatteryManager;
+
 import de.robv.android.xposed.XposedHelpers;
 
 public class BatteryTracker {
@@ -10,7 +12,7 @@ public class BatteryTracker {
     }
 
     public boolean shouldIndicateCharging() {
-        return (boolean) XposedHelpers.callMethod(mTracker, "shouldIndicateCharging");
+        return status() == BatteryManager.BATTERY_STATUS_CHARGING || plugged() && status() == BatteryManager.BATTERY_STATUS_FULL;
     }
 
     public int level() {
