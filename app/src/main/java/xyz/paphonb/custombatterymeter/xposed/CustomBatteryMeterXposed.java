@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.os.Build;
+import android.util.TypedValue;
 import android.view.View;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -109,7 +110,9 @@ public class CustomBatteryMeterXposed implements IXposedHookLoadPackage {
     }
 
     private void replaceOnMeasure(XC_MethodHook.MethodHookParam param) {
-        int height = View.MeasureSpec.getSize((Integer) param.args[1]);
+        Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
+        Resources res = context.getResources();
+        int height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 14.5f, res.getDisplayMetrics());
         height += (CircleBatteryMeterDrawable.STROKE_WITH / 3);
         XposedHelpers.callMethod(param.thisObject, "setMeasuredDimension", height, height);
     }
